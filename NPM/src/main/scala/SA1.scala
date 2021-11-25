@@ -26,7 +26,7 @@ object SA1 extends App {
 //  Convert the string to Package type
   val flowConverter: Flow[String, Package, NotUsed] = Flow[String].map(x=>Package(Name = x))
 //  Sink
-  val sink: Sink[String, Future[Done]] = Sink.foreach(x => println("Package Name: "+x))
+  val sink: Sink[Package, Future[Done]] = Sink.foreach(x => println("Package Name: "+x.Name))
 //  Make the graph
   val runnableGraph: RunnableGraph[Future[Done]] = source.via(flowUnzip)
     .via(flowString)
