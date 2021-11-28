@@ -24,7 +24,6 @@ case class Package(Name: String = "Empty", Dependencies: ListBuffer[Int] = ListB
 //  Get Dependencies
   def get_dependencies: Package = {
     var numberOfDependencies = 0
-    var numberOfDevDependencies = 0
     val url = s"https://registry.npmjs.org/${Name}"
     var dependencies = ListBuffer()
     val response = requests.get(url)
@@ -41,6 +40,22 @@ case class Package(Name: String = "Empty", Dependencies: ListBuffer[Int] = ListB
         }
         Dependencies += numberOfDependencies
         numberOfDependencies = 0
+      }
+    }
+    else {
+      println(response.statusCode)
+    }
+    return this
+  }
+  def get_dev_dependencies: Package = {
+    var numberOfDevDependencies = 0
+    val url = s"https://registry.npmjs.org/${Name}"
+    var dependencies = ListBuffer()
+    val response = requests.get(url)
+    if (response.statusCode == 200) {
+      val json = ujson.read(response.text)
+      val versions = json.obj("versions").obj.toList
+      for ((version, remain) <- versions) {
         try {
           var devDependencies = remain.obj("devDependencies").obj.toList
           numberOfDevDependencies += devDependencies.length
