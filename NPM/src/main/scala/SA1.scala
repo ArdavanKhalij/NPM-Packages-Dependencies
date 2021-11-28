@@ -48,23 +48,5 @@ object SA1 extends App {
     .toMat(sink)(Keep.right)
 //  Run and then terminate
   runnableGraph.run().foreach(_ => actorSystem.terminate())
-//  Get a JSON from API and have the versions
-  def get_json(inputPackage: Package) {//: Package = {
-    val url = s"https://registry.npmjs.org/${inputPackage.Name}"
-    var NPM = Package(Name = inputPackage.Name)
-    val response = requests.get(url)
-    if (response.statusCode == 200) {
-      val json = ujson.read(response.text)
-      val versions = json.obj("versions").obj.toList
-      print(versions)
-      for ((version, remain) <- versions){
-        NPM.Version.appended(version)
-      }
-    }
-    else {
-      println(response.statusCode)
-    }
-    return NPM
-  }
 }
 ////////////////////////////////////////// The object of the project ////////////////////////////////////////////
