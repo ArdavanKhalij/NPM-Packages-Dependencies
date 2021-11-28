@@ -7,8 +7,6 @@ import java.nio.file.Paths
 import akka.{Done, NotUsed}
 import akka.util.ByteString
 
-import java.text.SimpleDateFormat
-import java.util.Date
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -36,8 +34,16 @@ object SA1 extends App {
   val requestLimiter = Flow[Package].throttle(1, 3.second)
 //  API Request and get the list of versions
   val requestApiAndGetVersions: Flow[Package, Package, NotUsed] = Flow[Package].map(x => x.get_json_and_versions)
+//  Get Dependencies and DevDependencies of each package
+  val getDependenciesAndDevDependencies: Flow[Package, Package, NotUsed] = Flow[Package].map(x => x.get_dependencies)
 //  Sink
-  val sink: Sink[Package, Future[Done]] = Sink.foreach(x => println("Package Name: " + x.Name + ", Package Versions: " + x.Version))
+  val sink: Sink[Package, Future[Done]] = Sink.foreach{
+    x =>
+    println("Analysing " + x.Name)
+    for (i <- 0 to x.Version.length-1) {
+      println("Version: "+x.Version(i)+", Dependencies: "+x.Dependencies(i)+", DevDependencies: "+x.DevDependencies(i))
+    }
+  }
 //  Make the graph
   val runnableGraph: RunnableGraph[Future[Done]] = source.via(flowUnzip)
     .via(flowString)
@@ -46,6 +52,7 @@ object SA1 extends App {
     .via(buffer)
     .via(requestLimiter)
     .via(requestApiAndGetVersions)
+    .via(getDependenciesAndDevDependencies)
     .toMat(sink)(Keep.right)
 //  Run and then terminate
   runnableGraph.run().foreach(_ => actorSystem.terminate())
