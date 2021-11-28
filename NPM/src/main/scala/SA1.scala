@@ -39,6 +39,8 @@ object SA1 extends App {
     .via(flowString)
     .via(flowSplitLines)
     .via(flowConverter)
+    .via(buffer)
+    .via(requestLimiter)
     .toMat(sink)(Keep.right)
 //  Run and then terminate
   runnableGraph.run().foreach(_ => actorSystem.terminate())
