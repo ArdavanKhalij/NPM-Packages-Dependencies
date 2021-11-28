@@ -1,10 +1,13 @@
 ////////////////////////////////////////////////// Libraries ////////////////////////////////////////////////////
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, IOResult}
+import akka.stream.{ActorMaterializer, IOResult, OverflowStrategy}
 import akka.stream.scaladsl.{Compression, FileIO, Flow, Keep, RunnableGraph, Sink, Source}
+
 import java.nio.file.Paths
 import akka.{Done, NotUsed}
 import akka.util.ByteString
+
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 ////////////////////////////////////////////////// Libraries ////////////////////////////////////////////////////
@@ -24,7 +27,11 @@ object SA1 extends App {
 //  Split the string to package names
   val flowSplitLines: Flow[String, String, NotUsed] = Flow[String].mapConcat(_.split("\n").toList)
 //  Convert the string to Package type
-  val flowConverter: Flow[String, Package, NotUsed] = Flow[String].map(x=>Package(Name = x))
+  val flowConverter: Flow[String, Package, NotUsed] = Flow[String].map(x => Package(Name = x))
+//  Define the buffer
+  val buffer = Flow[Package].buffer(10, OverflowStrategy.backpressure)
+//  Limit request to NPM
+  val requestLimiter = Flow[Package].throttle(1, 3.second)
 //  Sink
   val sink: Sink[Package, Future[Done]] = Sink.foreach(x => println("Package Name: "+x.Name))
 //  Make the graph
