@@ -35,9 +35,9 @@ object SA1 extends App {
 //  Limit request to NPM
   val requestLimiter = Flow[Package].throttle(1, 3.second)
 //  API Request and get the list of versions
-//  val requestApiAndGetVersions = Flow[Package]
+  val requestApiAndGetVersions: Flow[Package, Package, NotUsed] = Flow[Package].map(x => x.get_json_and_versions)
 //  Sink
-  val sink: Sink[Package, Future[Done]] = Sink.foreach(x => println("Package Name: "+x.Name))
+  val sink: Sink[Package, Future[Done]] = Sink.foreach(x => println("Package Name: " + x.Name + ", Package Versions: " + x.Version))
 //  Make the graph
   val runnableGraph: RunnableGraph[Future[Done]] = source.via(flowUnzip)
     .via(flowString)
@@ -45,6 +45,7 @@ object SA1 extends App {
     .via(flowConverter)
     .via(buffer)
     .via(requestLimiter)
+    .via(requestApiAndGetVersions)
     .toMat(sink)(Keep.right)
 //  Run and then terminate
   runnableGraph.run().foreach(_ => actorSystem.terminate())
