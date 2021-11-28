@@ -34,8 +34,10 @@ object SA1 extends App {
   val requestLimiter = Flow[Package].throttle(1, 3.second)
 //  API Request and get the list of versions
   val requestApiAndGetVersions: Flow[Package, Package, NotUsed] = Flow[Package].map(x => x.get_json_and_versions)
-//  Get Dependencies and DevDependencies of each package
-  val getDependenciesAndDevDependencies: Flow[Package, Package, NotUsed] = Flow[Package].map(x => x.get_dependencies)
+//  Get Dependencies of each package
+  val getDependencies: Flow[Package, Package, NotUsed] = Flow[Package].map(x => x.get_dependencies)
+//  Get DevDependencies of each package
+  val getDevDependencies: Flow[Package, Package, NotUsed] = Flow[Package].map(x => x.get_dev_dependencies)
 //  Sink
   val sink: Sink[Package, Future[Done]] = Sink.foreach{
     x =>
@@ -52,7 +54,8 @@ object SA1 extends App {
     .via(buffer)
     .via(requestLimiter)
     .via(requestApiAndGetVersions)
-    .via(getDependenciesAndDevDependencies)
+    .via(getDependencies)
+    .via(getDevDependencies)
     .toMat(sink)(Keep.right)
 //  Run and then terminate
   runnableGraph.run().foreach(_ => actorSystem.terminate())
