@@ -1,7 +1,8 @@
 ////////////////////////////////////////////////// Libraries ////////////////////////////////////////////////////
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, IOResult, OverflowStrategy}
-import akka.stream.scaladsl.{Compression, FileIO, Flow, Keep, RunnableGraph, Sink, Source}
+import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
+import akka.stream.{ActorMaterializer, FlowShape, IOResult, OverflowStrategy}
+import akka.stream.scaladsl.{Broadcast, Compression, FileIO, Flow, GraphDSL, Keep, RunnableGraph, Sink, Source, Zip}
 
 import java.nio.file.Paths
 import akka.{Done, NotUsed}
@@ -38,24 +39,35 @@ object SA1 extends App {
   val getDependencies: Flow[Package, Package, NotUsed] = Flow[Package].map(x => x.get_dependencies)
 //  Get DevDependencies of each package
   val getDevDependencies: Flow[Package, Package, NotUsed] = Flow[Package].map(x => x.get_dev_dependencies)
-//  Sink
-  val sink: Sink[Package, Future[Done]] = Sink.foreach{
-    x =>
-    println("Analysing " + x.Name)
-    for (i <- 0 to x.Version.length-1) {
-      println("Version: "+x.Version(i)+", Dependencies: "+x.Dependencies(i)+", DevDependencies: "+x.DevDependencies(i))
-    }
-  }
-//  Make the graph
-  val runnableGraph: RunnableGraph[Future[Done]] = source.via(flowUnzip)
+//  We need to prepare data here for the next steps
+  val prepareDataForTheNextSteps: Flow[ByteString, Package, NotUsed] = flowUnzip
     .via(flowString)
     .via(flowSplitLines)
     .via(flowConverter)
-    .via(buffer)
     .via(requestLimiter)
     .via(requestApiAndGetVersions)
-    .via(getDependencies)
-    .via(getDevDependencies)
+  val onePipelineGraph: Flow[Package, (Package, Package), NotUsed] = Flow.fromGraph(
+  GraphDSL.create() { implicit builder =>
+    val dependencies = builder.add(getDependencies)
+    val devDependencies = builder.add(getDevDependencies)
+    val broadcast = builder.add(Broadcast[Package](2))
+    val zip = builder.add(Zip[Package, Package])
+    broadcast.out(0) ~> dependencies ~> zip.in0
+    broadcast.out(1) ~> devDependencies ~> zip.in1
+    FlowShape(broadcast.in, zip.out)
+  })
+  //  Sink
+  val sink: Sink[(Package, Package), Future[Done]] = Sink.foreach[(Package, Package)]{
+    x =>
+    println("Analysing " + x._1.Name)
+    for (i <- 0 to x._1.Version.length-1) {
+      println("Version: "+x._1.Version(i)+", Dependencies: "+x._1.Dependencies(i)+", DevDependencies: "+x._2.DevDependencies(i))
+    }
+  }
+//  Make the graph
+  val runnableGraph: RunnableGraph[Future[Done]] = source
+    .via(prepareDataForTheNextSteps)
+    .via(onePipelineGraph)
     .toMat(sink)(Keep.right)
 //  Run and then terminate
   runnableGraph.run().foreach(_ => actorSystem.terminate())
