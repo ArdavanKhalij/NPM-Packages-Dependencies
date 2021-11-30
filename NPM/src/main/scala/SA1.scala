@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////// Libraries ////////////////////////////////////////////////////
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
-import akka.stream.{ActorMaterializer, FlowShape, IOResult, OverflowStrategy}
-import akka.stream.scaladsl.{Broadcast, Compression, FileIO, Flow, GraphDSL, Keep, RunnableGraph, Sink, Source, Zip}
+import akka.stream.scaladsl.GraphDSL.Implicits.{fanOut2flow, port2flow}
+import akka.stream.{ActorMaterializer, FlowShape, IOResult, OverflowStrategy, javadsl}
+import akka.stream.scaladsl.{Balance, Broadcast, Compression, FileIO, Flow, GraphDSL, Keep, Merge, RunnableGraph, Sink, Source, Zip}
 
 import java.nio.file.Paths
 import akka.{Done, NotUsed}
@@ -57,18 +57,29 @@ object SA1 extends App {
     broadcast.out(1) ~> devDependencies ~> zip.in1
     FlowShape(broadcast.in, zip.out)
   })
+//  Having parallel pipelines
+  val parallelPipeline: Flow[(Package, Package), ((Package, Package)), NotUsed] = Flow.fromGraph(
+  GraphDSL.create() { implicit builder =>
+    val balance = builder.add(Balance[(Package, Package)](2))
+    val merge = builder.add(Merge[(Package, Package)](2))
+    balance.out(0) ~> merge.in(0)
+    balance.out(1) ~> merge.in(1)
+    FlowShape(balance.in, merge.out)
+  })
   //  Sink
-  val sink: Sink[(Package, Package), Future[Done]] = Sink.foreach[(Package, Package)]{
+  val sink: Sink[(Package, Package), Future[Done]] = Sink
+  .foreach[(Package, Package)]{
     x =>
-    println("Analysing " + x._1.Name)
-    for (i <- 0 to x._1.Version.length-1) {
-      println("Version: "+x._1.Version(i)+", Dependencies: "+x._1.Dependencies(i)+", DevDependencies: "+x._2.DevDependencies(i))
-    }
+      println("Analysing " + x._1.Name)
+        for (i <- 0 to x._1.Version.length-1) {
+          println("Version: "+x._1.Version(i)+", Dependencies: "+x._1.Dependencies(i)+", DevDependencies: "+x._2.DevDependencies(i))
+        }
   }
 //  Make the graph
   val runnableGraph: RunnableGraph[Future[Done]] = source
     .via(prepareDataForTheNextSteps)
     .via(onePipelineGraph)
+    .via(parallelPipeline)
     .toMat(sink)(Keep.right)
 //  Run and then terminate
   runnableGraph.run().foreach(_ => actorSystem.terminate())
