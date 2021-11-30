@@ -1,5 +1,3 @@
-import com.sun.tools.classfile.Dependencies
-
 import scala.collection.mutable.ListBuffer
 
 case class Package(Name: String = "Empty", Dependencies: ListBuffer[Int] = ListBuffer[Int]()
@@ -7,11 +5,16 @@ case class Package(Name: String = "Empty", Dependencies: ListBuffer[Int] = ListB
                    , DevDependencies: ListBuffer[Int] = ListBuffer[Int]()){
 //  Get versions
   def get_json_and_versions: Package = {
+//    Produce URL
     val url = s"https://registry.npmjs.org/${Name}"
+//    Get response
     val response = requests.get(url)
+//    Check if the API is available
     if (response.statusCode == 200) {
       val json = ujson.read(response.text)
+//      Get the versions
       val versions = json.obj("versions").obj.toList
+//      Make a list of versions
       for ((version, remain) <- versions){
         Version += version
       }
@@ -31,6 +34,7 @@ case class Package(Name: String = "Empty", Dependencies: ListBuffer[Int] = ListB
       val json = ujson.read(response.text)
       val versions = json.obj("versions").obj.toList
       for ((version, remain) <- versions) {
+//        We use try catch because some packages has not dependency field
         try {
           var dependencies = remain.obj("dependencies").obj.toList
           numberOfDependencies += dependencies.length
