@@ -10,8 +10,7 @@ After making the source to a suitable format, I created a case class called Pack
 4. DevDependencies (A ListBuffer of Int).
 
 This case class also contains three methods:<br><b>
-
-1. *get_json_and_versions:* Gets all of the versions of a NPM package.
+1. get_json_and_versions: Gets all of the versions of a NPM package.
 2. get_dependencies: Gets the number of dependencies of each version of a NPM package.
 3. get_dev_dependencies: Gets the number of devDependencies of each version of a NPM package.
 
@@ -19,7 +18,6 @@ After defining the case class, I converted the String type to Package type and i
 After that, I use a flow to get the versions with the get_json_and_versions method and two other separate flows for getting dependencies and devDependencies with get_dependencies get_dev_dependencies methods.<br><br>
 Two other flows are buffer and request limiter. Buffer is obvious, and request limiter is for sending a request every 3 seconds.
 After having all the flows, I made the graph the way it was in the picture in the assignment:<br><br>
-
 1. Making a pipeline by using Broadcast and Zip. I made them as a flow as well to use them in the runnableGraph part.
 2. Making two parallel pipelines with Balance and Merge. I made them as a flow as well to use them in the runnableGraph part.
 
