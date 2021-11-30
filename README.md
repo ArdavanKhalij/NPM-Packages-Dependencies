@@ -8,7 +8,7 @@ After making the source to a suitable format, I created a case class called Pack
 2. Version (A ListBuffer of String)
 3. Dependencies (A ListBuffer of Int)
 4. DevDependencies (A ListBuffer of Int)
-This case class also contains three methods:<br><br>
+This case class also contains three methods:<br><b>
 1. get_json_and_versions: Gets all of the versions of a NPM package.
 2. get_dependencies: Gets the number of dependencies of each version of a NPM package.
 3. get_dev_dependencies: Gets the number of devDependencies of each version of a NPM package.
