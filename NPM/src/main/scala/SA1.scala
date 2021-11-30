@@ -58,12 +58,13 @@ object SA1 extends App {
     FlowShape(broadcast.in, zip.out)
   })
 //  Having parallel pipelines
-  val parallelPipeline: Flow[(Package, Package), ((Package, Package)), NotUsed] = Flow.fromGraph(
+  val parallelPipeline: Flow[Package, ((Package, Package)), NotUsed] = Flow.fromGraph(
   GraphDSL.create() { implicit builder =>
-    val balance = builder.add(Balance[(Package, Package)](2))
+    val balance = builder.add(Balance[Package](2))
+    val onePipeline = onePipelineGraph
     val merge = builder.add(Merge[(Package, Package)](2))
-    balance.out(0) ~> merge.in(0)
-    balance.out(1) ~> merge.in(1)
+    balance.out(0) ~> onePipelineGraph ~> merge.in(0)
+    balance.out(1) ~> onePipelineGraph ~> merge.in(1)
     FlowShape(balance.in, merge.out)
   })
   //  Sink
@@ -78,7 +79,7 @@ object SA1 extends App {
 //  Make the graph
   val runnableGraph: RunnableGraph[Future[Done]] = source
     .via(prepareDataForTheNextSteps)
-    .via(onePipelineGraph)
+    .via(buffer)
     .via(parallelPipeline)
     .toMat(sink)(Keep.right)
 //  Run and then terminate
