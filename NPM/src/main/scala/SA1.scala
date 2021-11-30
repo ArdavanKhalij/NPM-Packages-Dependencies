@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////// Libraries ////////////////////////////////////////////////////
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.GraphDSL.Implicits.{fanOut2flow, port2flow}
-import akka.stream.{ActorMaterializer, FlowShape, IOResult, OverflowStrategy, javadsl}
+import akka.stream.scaladsl.GraphDSL.Implicits.{port2flow}
+import akka.stream.{ActorMaterializer, FlowShape, IOResult, OverflowStrategy}
 import akka.stream.scaladsl.{Balance, Broadcast, Compression, FileIO, Flow, GraphDSL, Keep, Merge, RunnableGraph, Sink, Source, Zip}
 
 import java.nio.file.Paths
