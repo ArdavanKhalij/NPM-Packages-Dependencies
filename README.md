@@ -11,7 +11,7 @@ After making the source to a suitable format, I created a case class called Pack
 
 This case class also contains three methods:<br><b>
 
-1. get_json_and_versions: Gets all of the versions of a NPM package.
+1. *get_json_and_versions:* Gets all of the versions of a NPM package.
 2. get_dependencies: Gets the number of dependencies of each version of a NPM package.
 3. get_dev_dependencies: Gets the number of devDependencies of each version of a NPM package.
 
